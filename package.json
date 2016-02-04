@@ -1,0 +1,9 @@
+{
+	"name": "elric-display",
+	"description": "The Elric plugin that provides interfaces around the house",
+	"version": "0.1.0",
+	"author": "Jelle De Loecker <jelle@develry.be>",
+	"keywords": ["elric", "interface", "plugin"],
+	"repository": "git@github.com:skerit/elric-display.git",
+	"license": "GPLv3"
+}
