@@ -1,9 +1,15 @@
-<% implement('layouts/chimera') %>
-<% style('elric-chimera') %>
+<% expands('layouts/display_body') %>
+<% style('display') %>
+<% script([{name: 'jquery', path: '//code.jquery.com/jquery-1.11.3.min.js'}, 'elric_display_start']); %>
 
-<% start('chimera-status') %>
-<% end('chimera-status') %>
-
-<% start('chimera-cage') %>
-TEST
-<% end('chimera-cage') %>
+<% start('enclosure') %>
+<div class="actions hover-group">
+<% for (key in actions) { %>
+	<% action = actions[key] %>
+	<div class="action" tabindex="0" data-href="<%= Router.routeUrl('display@Action', {action: action.name}) %>">
+		<h1><%= action.title %></h1>
+		<p><%= action.description %></p>
+	</div>
+<% } %>
+</div>
+<% end('enclosure') %>

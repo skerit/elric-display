@@ -1,9 +1,6 @@
 <%
-// Expand using chimera_base, but settle for base if it's available
-expands(['layouts/chimera_base', 'layouts/base']);
-
-// Load the chimera stylesheet
-style('chimera/chimera');
+// Expand using display_base, but settle for base if it's available
+expands(['layouts/display_base', 'layouts/base']);
 
 // Enable the svg webcomponent
 WebComponent.load('svg');
@@ -12,32 +9,11 @@ WebComponent.load('switch');
 WebComponent.load('button-group');
 
 // Load the chimera script
-/*script('chimera/chimera');*/
+script(['display/display', 'display/play_source', 'display/video_player', 'display/start']);
 
 // Start the body block
 start('body') %>
 <div class="enclosure">
-	<div class="page-topbar">
-		<%
-			assign('chimera-brand', {className: true});
-			brand_opts = {
-				content: '<h1>' + (project_title || 'Chimera') + '</h1>',
-				className: 'chimera-brand-anchor'
-			};
-
-			Router.printRoute('chimera@Dashboard', null, brand_opts);
-			assign_end('chimera-brand')
-		%>
-		<% assign('chimera-title', {className: true}) %>
-		<% assign('chimera-status', {className: true}) %>
-	</div>
-	<div class="page-container">
-		<%
-			assign('chimera-sidenav', {className: true});
-			print_element('chimera/sidebar');
-			assign_end('chimera-sidenav');
-		%>
-		<% assign('chimera-cage', {className: true}) %>
-	</div>
+	<% assign('enclosure') %>
 </div>
 <% end('body') %>

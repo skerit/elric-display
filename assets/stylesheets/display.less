@@ -1,0 +1,103 @@
+@import "topsoil/less/topsoil.less";
+
+@widget-background: #424749;
+@widget-borders: #59595A;
+
+body {
+	background-color: #878787;
+}
+
+.inactive-screen {
+	filter: blur(5px);
+	-webkit-filter: blur(5px);
+}
+
+.actions {
+	.flexParent(column, center);
+	height: 100vh;
+	align-items: center;
+}
+
+.action {
+	margin: 1rem;
+	border: 2px dashed rgba(50, 50, 50, 0.2);
+	padding: 1rem;
+	outline: none;
+	width: 30rem;
+	border-radius: 5px;
+	background-color: @widget-background;
+	color: white;
+	box-shadow: 2px 2px 2px rgba(0,0,0,0.3);
+
+	&:focus {
+		border: 2px solid blue;
+	}
+}
+
+[tabindex] {
+	cursor: pointer;
+}
+
+.display-list {
+	width: 100%;
+	max-width: 100%;
+	margin-bottom: 1.5rem;
+	background-color: transparent;
+	background-color: @widget-background;
+	color: white;
+
+	th.text-center {
+		text-align: center;
+	}
+
+	tr > th {
+		padding: 1.1rem 0.7rem 0.9rem;
+		font-size: 1rem;
+		font-weight: 600;
+		text-transform: uppercase;
+		vertical-align: bottom;
+		text-align: left;
+
+		a {
+			text-decoration: none;
+			color: inherit;
+		}
+	}
+
+	> thead > tr,
+	> tbody > tr,
+	> tfoot > tr {
+		> th, > td {
+			padding: 0.9rem 0.7rem;
+			border-top: 1px solid @widget-borders;
+		}
+	}
+
+	> thead > tr > th {
+		border-top: 0;
+		border-bottom: 1px solid #ddd;
+	}
+
+	&-bordered {
+		border: 1px solid #e9e9e9;
+
+		&>thead>tr>th,
+		&>thead>tr>td {
+			border-bottom-width: 1px;
+			border-bottom-color: #e9e9e9;
+		}
+
+		&>thead>tr>th, &>tbody>tr>th, &>tfoot>tr>th, &>thead>tr>td, &>tbody>tr>td, &>tfoot>tr>td {
+			border: 1px solid #f0f0f0;
+		}
+	}
+
+	&-striped > tbody > tr:nth-of-type(odd) {
+		background-color: #f9f9f9;
+	}
+
+	> tbody > tr:focus,
+	&-hover > tbody > tr:hover {
+		background-color: @widget-borders;
+	}
+}
