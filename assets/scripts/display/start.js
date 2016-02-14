@@ -80,13 +80,8 @@ window.display = new DisplayClass();
 
 		// Listen for backspaces
 		if (event.keyCode == 8) {
-			top_element = closest(document.elementFromPoint(1, 1), '.js-he-dialog-wrapper');
-
-			if (top_element) {
-				top_element.remove();
-				event.preventDefault();
-			}
-
+			display.goBack();
+			event.preventDefault();
 			return;
 		}
 
@@ -258,4 +253,20 @@ hawkejs.constructor.onAttribute('data-event', function onDisplayDataEvent(elemen
 
 		display.doEvent(value);
 	});
+});
+
+// Bind to elements with the data-video-player attribute
+hawkejs.constructor.onAttribute('data-video-player', function onVideoPlayer(element, value, old_value, created) {
+
+	var player;
+
+	if (element.has_video_player) {
+		return;
+	}
+
+	element.has_video_player = true;
+	player = display.getVideoplayer()
+	player.moveTo(element);
+
+	console.log(element);
 });

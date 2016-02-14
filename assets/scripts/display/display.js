@@ -91,6 +91,39 @@ DisplayClass.setMethod(function blur() {
 });
 
 /**
+ * Get the closest element matching the query
+ *
+ * @author   Jelle De Loecker   <jelle@develry.be>
+ * @since    0.1.0
+ * @version  0.1.0
+ */
+DisplayClass.setMethod(function closestElement(element, query) {
+
+	var p = element,
+	    o;
+
+	// Try getting from the children
+	o = p.querySelector(query);
+
+	if (o) {
+		return o;
+	}
+
+	// Not found among the children, look up
+	while (p !== null) {
+		o = p;
+
+		if (o.matches(query)) {
+			return o;
+		}
+
+		p = o.parentElement;
+	}
+
+	return null;
+});
+
+/**
  * Reset the active/inactive classes
  *
  * @author   Jelle De Loecker   <jelle@develry.be>
@@ -117,6 +150,28 @@ DisplayClass.setMethod(function resetActive() {
 	// Now set the active screen
 	active_screen.classList.remove('inactive-screen');
 	active_screen.classList.add('active-screen');
+});
+
+/**
+ * Go back a screen
+ *
+ * @author   Jelle De Loecker   <jelle@develry.be>
+ * @since    0.1.0
+ * @version  0.1.0
+ */
+DisplayClass.setMethod(function goBack() {
+
+	var parent;
+
+	if (this.inactive_screens.length) {
+
+		parent = this.closestElement(this.screen, '.js-he-dialog-wrapper');
+
+		if (parent) {
+			parent.remove();
+			this.resetActive();
+		}
+	}
 });
 
 /**

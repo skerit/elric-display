@@ -7,9 +7,50 @@ body {
 	background-color: #878787;
 }
 
+// Anything that becomes full-screen
+// should fill the screen
+*:-webkit-full-screen {
+	width: 100%;
+	height: 100%;
+}
+
+.video-player {
+	position: relative;
+	background: black;
+
+	video {
+		width: 100%;
+		height: 100%;
+	}
+
+	.controls {
+		.flexParent();
+		position: absolute;
+		bottom: 0;
+		left: 0;
+		right: 0;
+
+		> * {
+			.flexChild(1 1 auto);
+		}
+	}
+}
+
+// Blur inactive screens
 .inactive-screen {
 	filter: blur(5px);
 	-webkit-filter: blur(5px);
+}
+
+// Expand hover-group wrappers
+.hover-group > x-hawkejs {
+	.flexParent();
+	width: 100vw;
+	height: 100vh;
+
+	& > * {
+		.flexChild(1 1 auto);
+	}
 }
 
 .actions {
@@ -43,7 +84,6 @@ body {
 	max-width: 100%;
 	margin-bottom: 1.5rem;
 	background-color: transparent;
-	background-color: @widget-background;
 	color: white;
 
 	th.text-center {
@@ -99,5 +139,44 @@ body {
 	> tbody > tr:focus,
 	&-hover > tbody > tr:hover {
 		background-color: @widget-borders;
+	}
+}
+
+.row {
+	.flexParent(row, center);
+}
+
+.col {
+	.flexChild(1 1 auto);
+	.flexParent(column, stretch);
+	justify-content: center;
+	align-items: center;
+}
+
+.col .row {
+	.flexChild(1 0 auto);
+	width: 100%;
+}
+
+.pane-container {
+	padding: 1rem;
+
+	&.horizontal {
+		.flexParent(row, space-between);
+	}
+
+	&.vertical {
+		.flexParent(column, space-between);
+	}
+
+	&.dual {
+		.pane {
+			.flexChild(0 0 49%);
+		}
+	}
+
+	.pane {
+		padding: 1rem;
+		background-color: @widget-background;
 	}
 }

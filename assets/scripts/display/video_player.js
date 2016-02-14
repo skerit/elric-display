@@ -17,6 +17,9 @@ var VideoPlayer = Function.inherits('Informer', 'Elric', function VideoPlayer(is
 
 	// Init the elements
 	this.init();
+
+	// Fullscreen is false at beginning
+	this.is_fullscreen = false;
 });
 
 /**
@@ -43,11 +46,11 @@ VideoPlayer.setMethod(function init() {
 	this.cover = Blast.parseHTML('<div class="cover"></div>');
 	this.loader = Blast.parseHTML('<div class="loader-wrapper"><div class="loader"></div></div>');
 
-	controls.play = Blast.parseHTML('<button type="button" class="play"><i class="fa fa-play"></i></button>');
+	controls.play = Blast.parseHTML('<button type="button" class="play">Play</button>');
 	controls.seek = Blast.parseHTML('<input type="range" class="seek" value="0" max="1000" step="0.01">');
-	controls.mute = Blast.parseHTML('<button type="button" class="mute"><i class="fa fa-volume-up"></i></button>');
+	controls.mute = Blast.parseHTML('<button type="button" class="mute">Mute</button>');
 	controls.volume = Blast.parseHTML('<input type="range" class="volume" min="0" max="1" step="0.1" value="1">');
-	controls.fullscreen = Blast.parseHTML('<button type="button" class="fullscreen"><i class="fa fa-expand"></i></button>');
+	controls.fullscreen = Blast.parseHTML('<button type="button" class="fullscreen">Fullscreen</button>');
 
 	controls.play.addEventListener('click', function() {
 		if (that.video.paused == true) {
@@ -111,16 +114,7 @@ VideoPlayer.setMethod(function init() {
 
 	// Going fullscreen
 	controls.fullscreen.addEventListener('click', function() {
-
-		var video = that.video;
-
-		if (video.requestFullscreen) {
-			video.requestFullscreen();
-		} else if (video.mozRequestFullScreen) {
-			video.mozRequestFullScreen(); // Firefox
-		} else if (video.webkitRequestFullscreen) {
-			video.webkitRequestFullscreen(); // Chrome and Safari
-		}
+		that.toggleFullScreen();
 	});
 
 	// Update the seek bar as the video plays
@@ -169,6 +163,59 @@ VideoPlayer.setMethod(function init() {
 });
 
 /**
+ * Toggle fullscreen
+ *
+ * @author        Jelle De Loecker   <jelle@develry.be>
+ * @since         0.1.0
+ * @version       0.1.0
+ */
+VideoPlayer.setMethod(function toggleFullScreen() {
+	this.setFullScreen(!this.is_fullscreen);
+
+	return this.is_fullscreen;
+});
+
+/**
+ * Set the fullscreen
+ *
+ * @author        Jelle De Loecker   <jelle@develry.be>
+ * @since         0.1.0
+ * @version       0.1.0
+ */
+VideoPlayer.setMethod(function setFullScreen(value) {
+
+	var element = this.wrap;
+
+	if (value == null) {
+		value = true;
+	}
+
+	if (value) {
+		if (element.requestFullscreen) {
+			element.requestFullscreen();
+		} else if (element.mozRequestFullScreen) {
+			element.mozRequestFullScreen(); // Firefox
+		} else if (element.webkitRequestFullscreen) {
+			element.webkitRequestFullscreen(); // Chrome and Safari
+		}
+
+		this.is_fullscreen = true;
+	} else {
+		if (document.cancelFullscreen) {
+			document.cancelFullscreen();
+		} else if (document.mozCancelFullScreen) {
+			document.mozCancelFullScreen(); // Firefox
+		} else if (document.webkitCancelFullScreen) {
+			document.webkitCancelFullScreen(); // Chrome and Safari
+		}
+
+		this.is_fullscreen = false;
+	}
+
+	return this.is_fullscreen;
+});
+
+/**
  * Move the video player to the given element
  *
  * @author        Jelle De Loecker   <jelle@develry.be>
@@ -209,6 +256,9 @@ VideoPlayer.setMethod(function playStream(stream, data) {
 		data = {};
 	}
 
+	// Unset the play id
+	this.setPlayId(null);
+
 	source = new PlaySource(this, stream, data);
 
 	this.currentSource = source;
@@ -228,4 +278,15 @@ VideoPlayer.setMethod(function playStream(stream, data) {
 	// Make sure the cover is hidden
 	this.cover.hidden = true;
 	this.loader.hidden = true;
+});
+
+/**
+ * Set the identifier of the video that is playing
+ *
+ * @author        Jelle De Loecker   <jelle@develry.be>
+ * @since         0.1.0
+ * @version       0.1.0
+ */
+VideoPlayer.setMethod(function setPlayId(id) {
+	this.play_id = id;
 });
