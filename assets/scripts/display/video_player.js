@@ -20,6 +20,9 @@ var VideoPlayer = Function.inherits('Informer', 'Elric', function VideoPlayer(is
 
 	// Fullscreen is false at beginning
 	this.is_fullscreen = false;
+
+	// The default duration
+	this.default_duration = 2400;
 });
 
 /**
@@ -32,6 +35,7 @@ var VideoPlayer = Function.inherits('Informer', 'Elric', function VideoPlayer(is
 VideoPlayer.setMethod(function init() {
 
 	var that = this,
+	    manual_seek = false,
 	    controls = {},
 	    lastdec = 0;
 
@@ -69,31 +73,31 @@ VideoPlayer.setMethod(function init() {
 	});
 
 	// Event listener for the seek bar
-	controls.seek.addEventListener('change', function() {
+	controls.seek.addEventListener('change', function onChange() {
 
-		var value,
-		    duration;
+		var value;
 
-		if (isFinite(that.video.duration)) {
-			duration = that.video.duration;
-		} else {
-			duration = 2400;
-		}
+		console.log('Seek bar changed');
 
 		// Calculate the new time
-		value = duration * (controls.seek.value / 100);
+		value = that.duration * (controls.seek.value / 100);
 
-		// Update the video time
-		that.video.currentTime = value;
+		// Seek to the requested time
+		that.seek(value);
 	});
 
 	// Pause during seeking!
-	controls.seek.addEventListener('mousedown', function() {
+	controls.seek.addEventListener('mousedown', function onMousedown() {
+		manual_seek = true;
 		that.video.pause();
 	});
 
-	controls.seek.addEventListener('mouseup', function() {
-		that.video.play();
+	controls.seek.addEventListener('click', function onClick() {
+		console.log('Clicked seek bar');
+	});
+
+	controls.seek.addEventListener('mouseup', function onMouseup() {
+		manual_seek = false;
 	});
 
 	controls.volume.addEventListener('change', function() {
@@ -124,9 +128,15 @@ VideoPlayer.setMethod(function init() {
 		    curdec,
 		    duration;
 
-		if (isFinite(that.video.duration)) {
-			duration = that.video.duration;
-		} else {
+		//console.log('Got timeupdate')
+
+		if (manual_seek) {
+			return;
+		}
+
+		duration = that.duration;
+
+		if (!duration) {
 			duration = 2400;
 		}
 
@@ -137,7 +147,13 @@ VideoPlayer.setMethod(function init() {
 		controls.seek.value = value;
 
 		// Get the current time, rounded to 10 seconds
-		curdec = ~~(that.video.currentTime / 10)
+		curdec = ~~(that.video.currentTime / 10);
+
+		// Emit a timeupdate
+		that.emit('timeupdate', that.video.currentTime);
+
+		// See if we need more data
+		that.checkBuffer(that.video.currentTime);
 
 		if (curdec > lastdec) {
 
@@ -160,6 +176,125 @@ VideoPlayer.setMethod(function init() {
 	Object.each(controls, function eachControl(control) {
 		that.controls.appendChild(control);
 	});
+});
+
+/**
+ * Get the duration
+ *
+ * @author        Jelle De Loecker   <jelle@develry.be>
+ * @since         0.1.0
+ * @version       0.1.0
+ *
+ * @return        {Number}
+ */
+VideoPlayer.setProperty(function duration() {
+
+	var result;
+
+	if (this.currentSource && this.currentSource.duration != null) {
+		return this.currentSource.duration;
+	}
+
+	if (isFinite(this.video.duration)) {
+		return this.video.duration;
+	}
+
+	if (this.default_duration) {
+		return this.default_duration;
+	}
+
+	return 0;
+});
+
+/**
+ * Get the current time
+ *
+ * @author        Jelle De Loecker   <jelle@develry.be>
+ * @since         0.1.0
+ * @version       0.1.0
+ *
+ * @return        {Number}
+ */
+VideoPlayer.setProperty(function currentTime() {
+	return this.video.currentTime;
+});
+
+/**
+ * Check the buffer and see if we need to make a new request
+ *
+ * @author        Jelle De Loecker   <jelle@develry.be>
+ * @since         0.1.0
+ * @version       0.1.0
+ */
+VideoPlayer.setMethod(function checkBuffer(currentTime) {
+
+	if (this.currentSource) {
+		return this.currentSource.checkBuffer(currentTime);
+	}
+
+	return false;
+});
+
+/**
+ * Does the current source have the requested time available
+ *
+ * @author        Jelle De Loecker   <jelle@develry.be>
+ * @since         0.1.0
+ * @version       0.1.0
+ */
+VideoPlayer.setMethod(function hasTime(value) {
+
+	if (this.currentSource) {
+		return this.currentSource.hasTime(value);
+	}
+
+	return false;
+});
+
+/**
+ * Indicate the given range is being downloaded
+ *
+ * @author        Jelle De Loecker   <jelle@develry.be>
+ * @since         0.1.0
+ * @version       0.1.0
+ */
+VideoPlayer.setMethod(function registerRange(start, end) {
+
+	if (this.currentSource) {
+		return this.currentSource.registerRange(start, end);
+	}
+
+	return false;
+});
+
+/**
+ * See if we need to fetch any range
+ *
+ * @author        Jelle De Loecker   <jelle@develry.be>
+ * @since         0.1.0
+ * @version       0.1.0
+ */
+VideoPlayer.setMethod(function calculateRangeToFetch(start, end) {
+
+	if (this.currentSource) {
+		return this.currentSource.calculateRangeToFetch(start, end);
+	}
+
+	return false;
+});
+
+/**
+ * Seek to the requested time
+ *
+ * @author        Jelle De Loecker   <jelle@develry.be>
+ * @since         0.1.0
+ * @version       0.1.0
+ */
+VideoPlayer.setMethod(function seek(value) {
+	console.log('Seek to:', value);
+
+	// Update the video time
+	//this.video.currentTime = value;
 });
 
 /**
@@ -278,6 +413,8 @@ VideoPlayer.setMethod(function playStream(stream, data) {
 	// Make sure the cover is hidden
 	this.cover.hidden = true;
 	this.loader.hidden = true;
+
+	return source;
 });
 
 /**
