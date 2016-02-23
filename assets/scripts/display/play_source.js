@@ -47,6 +47,9 @@ var PlaySource = Function.inherits('Informer', 'Elric', function PlaySource(play
 	// Cache response received from websocket before it's written to buffer
 	this.cache = [];
 
+	// Range callbacks
+	this.range_callbacks = [];
+
 	// The MediaSource instances
 	this.videoSource = new MediaSource();
 	this.audioSource = new MediaSource();
@@ -88,6 +91,10 @@ var PlaySource = Function.inherits('Informer', 'Elric', function PlaySource(play
 		this.registerRange(data.range);
 	}
 
+	this.on('got_range_start', function gotRangeStart(range) {
+		that.gotRangeStart(range);
+	});
+
 	this.addStream(stream);
 });
 
@@ -103,25 +110,61 @@ PlaySource.setMethod(function setDuration(duration) {
 });
 
 /**
+ * See if anything is waiting for this range
+ *
+ * @author        Jelle De Loecker   <jelle@kipdola.be>
+ * @since         0.1.0
+ * @version       0.1.0
+ */
+PlaySource.setMethod(function gotRangeStart(range) {
+
+	var obj,
+	    i;
+
+	console.log('Got range start:', range);
+
+	for (i = 0; i < this.range_callbacks.length; i++) {
+		obj = this.range_callbacks[i];
+
+		if (Object.alike(obj.range, range)) {
+
+			// Delete this object from the callback array
+			this.range_callbacks.splice(i, 1);
+
+			// Call the callback
+			obj.callback();
+
+			return;
+		}
+	}
+});
+
+/**
  * Add a stream
  *
  * @author        Jelle De Loecker   <jelle@kipdola.be>
  * @since         0.1.0
  * @version       0.1.0
  */
-PlaySource.setMethod(function addStream(stream, range) {
+PlaySource.setMethod(function addStream(stream, range, callback) {
 
 	var that = this,
-	    streamId = this.streams.push(stream) - 1;
+	    start,
+	    streamId = this.streams.push(stream) - 1,
+	    received;
 
 	// Pause the stream
 	stream.pause();
+
+	if (callback) {
+		this.on('stream-start-' + streamId, callback);
+	}
 
 	if (!range) {
 		range = [0];
 	}
 
-	console.log('Adding stream', stream);
+	start = range[0];
 
 	if (streamId > 0) {
 		// Wait for the previous stream to end
@@ -137,17 +180,27 @@ PlaySource.setMethod(function addStream(stream, range) {
 	function doStream() {
 		that.after('videoSourceOpen', function opened() {
 
-			// Set the offset
-			that.videoBuffer.timestampOffset = range[0];
-
 			stream.resume();
 
 			stream.on('data', function onData(data) {
-				that.addToBuffer(new Uint8Array(data));
+
+				var obj = {
+					data      : new Uint8Array(data),
+					range     : range,
+					offset    : null,
+					stream_id : streamId
+				};
+
+				if (received == null) {
+					received = true;
+					obj.offset = start;
+					obj.first = true;
+				}
+
+				that.addToBuffer(obj);
 			});
 
 			stream.on('end', function ended() {
-				console.log('Stream has ended');
 				that.emit('stream-end-' + streamId);
 			});
 		});
@@ -162,22 +215,65 @@ PlaySource.setMethod(function addStream(stream, range) {
  * @version       0.1.0
  */
 PlaySource.setMethod(function checkBuffer(currentTime) {
+	return this.requestRange(currentTime);
+});
+
+/**
+ * Request missing pieces of the given range
+ *
+ * @author        Jelle De Loecker   <jelle@kipdola.be>
+ * @since         0.1.0
+ * @version       0.1.0
+ *
+ * @param    {Number}   start
+ * @param    {Number}   end
+ * @param    {Number}   min_diff
+ * @param    {Function} callback   Called after first data is appended
+ */
+PlaySource.setMethod(function requestRange(start, end, min_diff, callback) {
 
 	var range,
 	    diff;
 
-	range = this.calculateRangeToFetch(currentTime, currentTime + 30);
+	if (Array.isArray(start)) {
+		callback = min_diff;
+		min_diff = end;
+		end = start[1];
+		start = start[0];
+	}
+
+	if (typeof min_diff == 'function') {
+		callback = min_diff;
+		min_diff = null;
+	}
+
+	if (end == null) {
+		end = start + this.player.segment_length;
+	}
+
+	range = this.calculateRangeToFetch(start, end);
 
 	if (!range) {
 		return;
 	}
 
-	diff = range[1] - range[0];
-
-	// If the range is smaller than 10 seconds, don't get it just yet
-	if (diff < 10) {
-		return false;
+	// If no min diff is given, use the default segment length
+	if (min_diff == null) {
+		min_diff = this.player.segment_length / 2;
 	}
+
+	// If min_diff is truthy,
+	// make sure the requested range is at least that long
+	if (min_diff) {
+		diff = range[1] - range[0];
+
+		// If the range is smaller than 10 seconds, don't get it just yet
+		if (diff < min_diff) {
+			return false;
+		}
+	}
+
+	if (callback) this.range_callbacks.push({range: range, callback: callback});
 
 	this.registerRange(range);
 	this.emit('request_range', range);
@@ -382,14 +478,15 @@ PlaySource.setMethod(function registerRange(start, end) {
  * @since         0.1.0
  * @version       0.1.0
  */
-PlaySource.setMethod(function addToBuffer(block) {
+PlaySource.setMethod(function addToBuffer(obj) {
 
-	var that = this;
+	var that = this,
+	    obj;
 
-	if (block) {
-		this.cache.push(block);
-		this.received += block.length;
-		this.buffered += block.length;
+	if (obj) {
+		this.cache.push(obj);
+		this.received += obj.data.length;
+		this.buffered += obj.data.length;
 	}
 
 	if (!this.videoBufferBusy && this.cache.length) {
@@ -397,10 +494,22 @@ PlaySource.setMethod(function addToBuffer(block) {
 		this.videoBufferBusy = true;
 
 		// Get the next block to add
-		block = this.cache.shift();
+		obj = this.cache.shift();
+
+		if (obj.first && obj.offset != null) {
+			console.log('Setting buffer offset to', obj.offset);
+
+			// Set the offset
+			that.videoBuffer.timestampOffset = obj.offset;
+		}
 
 		// Append it
-		this.videoBuffer.appendBuffer(block);
+		this.videoBuffer.appendBuffer(obj.data);
+
+		if (obj.first) {
+			that.emit('stream-start-' + obj.Stream_id);
+			that.emit('got_range_start', obj.range);
+		}
 
 		//console.log('Buffer size is now', this.buffered);
 	}

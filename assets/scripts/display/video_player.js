@@ -23,6 +23,12 @@ var VideoPlayer = Function.inherits('Informer', 'Elric', function VideoPlayer(is
 
 	// The default duration
 	this.default_duration = 2400;
+
+	// Length of segment pieces to fetch in seconds
+	this.segment_length = 2 * 60;
+
+	// The value last seeked to
+	this.last_seek = null;
 });
 
 /**
@@ -80,7 +86,7 @@ VideoPlayer.setMethod(function init() {
 		console.log('Seek bar changed');
 
 		// Calculate the new time
-		value = that.duration * (controls.seek.value / 100);
+		value = that.duration * (this.valueAsNumber / 1000);
 
 		// Seek to the requested time
 		that.seek(value);
@@ -92,8 +98,9 @@ VideoPlayer.setMethod(function init() {
 		that.video.pause();
 	});
 
+	// Listen to seek events
 	controls.seek.addEventListener('click', function onClick() {
-		console.log('Clicked seek bar');
+		console.log('Seek bar click, resume play?');
 	});
 
 	controls.seek.addEventListener('mouseup', function onMouseup() {
@@ -284,6 +291,28 @@ VideoPlayer.setMethod(function calculateRangeToFetch(start, end) {
 });
 
 /**
+ * Start playing the video
+ *
+ * @author        Jelle De Loecker   <jelle@develry.be>
+ * @since         0.1.0
+ * @version       0.1.0
+ */
+VideoPlayer.setMethod(function play() {
+	this.video.play();
+});
+
+/**
+ * Pause the video
+ *
+ * @author        Jelle De Loecker   <jelle@develry.be>
+ * @since         0.1.0
+ * @version       0.1.0
+ */
+VideoPlayer.setMethod(function pause() {
+	this.video.pause();
+});
+
+/**
  * Seek to the requested time
  *
  * @author        Jelle De Loecker   <jelle@develry.be>
@@ -291,10 +320,32 @@ VideoPlayer.setMethod(function calculateRangeToFetch(start, end) {
  * @version       0.1.0
  */
 VideoPlayer.setMethod(function seek(value) {
-	console.log('Seek to:', value);
 
-	// Update the video time
-	//this.video.currentTime = value;
+	var that = this,
+	    min = ~~(value / 10) * 10,
+	    max = min + this.segment_length;
+
+	// Store the value we last seeked to
+	this.last_seek = value;
+
+	this.currentSource.requestRange(min, max, false, function gotRange() {
+
+		// If another seek happened in the mean time, ignore this range response
+		if (that.last_seek != value) {
+			return;
+		}
+
+		// If the requested start time isn't available yet, wait another second
+		if (!that.hasTime(value)) {
+			return setTimeout(gotRange, 1000);
+		}
+
+		// Update the video time
+		that.video.currentTime = value;
+
+		// Resume the video
+		that.play();
+	});
 });
 
 /**
